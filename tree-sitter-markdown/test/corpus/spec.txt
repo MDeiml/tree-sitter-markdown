@@ -2919,8 +2919,7 @@ Example 169 - https://github.github.com/gfm/#example-169
 (document
   (section
     (link_reference_definition
-      (link_label)
-      (link_destination))
+      (link_label))
     (paragraph
       (inline))))
 

@@ -48,27 +48,35 @@ module.exports.rules = {
         $._soft_line_break
     )), ']'),
 
-    link_destination: $ => prec.dynamic(PRECEDENCE_LEVEL_LINK, choice(
-        seq('<', repeat(choice($._text_no_angle, $.backslash_escape, $.entity_reference, $.numeric_character_reference)), '>'),
-        seq(
-            choice( // first character is not a '<'
-                $._word,
-                punctuation_without($, ['<', '(', ')']),
-                $.backslash_escape,
-                $.entity_reference,
-                $.numeric_character_reference,
-                $._link_destination_parenthesis
-            ),
-            repeat(choice(
-                $._word,
-                punctuation_without($, ['(', ')']),
-                $.backslash_escape,
-                $.entity_reference,
-                $.numeric_character_reference,
-                $._link_destination_parenthesis
-            )),
-        )
+    link_destination: $ => prec.dynamic(PRECEDENCE_LEVEL_LINK, seq(
+        choice( // first character is not a '<'
+            $._word,
+            punctuation_without($, ['<', '(', ')']),
+            $.backslash_escape,
+            $.entity_reference,
+            $.numeric_character_reference,
+            $._link_destination_parenthesis
+        ),
+        repeat(choice(
+            $._word,
+            punctuation_without($, ['(', ')']),
+            $.backslash_escape,
+            $.entity_reference,
+            $.numeric_character_reference,
+            $._link_destination_parenthesis
+        )),
     )),
+    _link_destination_angle: $ => prec.dynamic(PRECEDENCE_LEVEL_LINK,
+        seq('<', alias(repeat(
+            choice(
+                $._text_no_angle,
+                $.backslash_escape,
+                $.entity_reference,
+                $.numeric_character_reference
+            )),
+            $.link_destination
+        ), '>'),
+    ),
     _link_destination_parenthesis: $ => seq('(', repeat(choice(
         $._word,
         punctuation_without($, ['(', ')']),

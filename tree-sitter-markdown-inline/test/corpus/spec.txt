@@ -2211,8 +2211,7 @@ Example 496 - https://github.github.com/gfm/#example-496
 
 (inline
   (inline_link
-    (link_text)
-    (link_destination)))
+    (link_text)))
 
 ================================================================================
 Example 497 - https://github.github.com/gfm/#example-497

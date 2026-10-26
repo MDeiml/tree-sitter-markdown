@@ -247,7 +247,7 @@ module.exports = grammar({
             $.link_label,
             ':',
             optional(seq(optional($._whitespace), optional(seq($._soft_line_break, optional($._whitespace))))),
-            $.link_destination,
+            choice($.link_destination, $._link_destination_angle),
             optional(prec.dynamic(2 * PRECEDENCE_LEVEL_LINK, seq(
                 choice(
                     seq($._whitespace, optional(seq($._soft_line_break, optional($._whitespace)))),
