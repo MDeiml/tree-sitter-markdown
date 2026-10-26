@@ -5995,22 +5995,6 @@
       "link_title"
     ],
     [
-      "wiki_link",
-      "_inline_element"
-    ],
-    [
-      "wiki_link",
-      "_inline_element_no_star"
-    ],
-    [
-      "wiki_link",
-      "_inline_element_no_underscore"
-    ],
-    [
-      "wiki_link",
-      "_inline_element_no_tilde"
-    ],
-    [
       "_emphasis_star",
       "_inline_element"
     ],
@@ -6107,10 +6091,6 @@
       "_inline_element_no_link"
     ],
     [
-      "_strong_emphasis_star_no_link",
-      "_inline_element_no_star"
-    ],
-    [
       "_emphasis_underscore_no_link",
       "_inline_element_no_star_no_link"
     ],
@@ -6131,10 +6111,6 @@
       "_emphasis_star_no_link",
       "_strong_emphasis_star_no_link",
       "_inline_element_no_underscore_no_link"
-    ],
-    [
-      "_strong_emphasis_underscore_no_link",
-      "_inline_element_no_underscore"
     ],
     [
       "_strikethrough_no_link",

@@ -96,11 +96,6 @@ module.exports = grammar(add_inline_rules({
         [$.shortcut_link, $._link_text],
         [$.link_destination, $.link_title],
         [$._link_destination_parenthesis, $.link_title],
-
-        [$.wiki_link, $._inline_element],
-        [$.wiki_link, $._inline_element_no_star],
-        [$.wiki_link, $._inline_element_no_underscore],
-        [$.wiki_link, $._inline_element_no_tilde],
     ],
     extras: $ => [],
 
@@ -436,7 +431,7 @@ function add_inline_rules(grammar) {
                 conflicts.push(['_emphasis_star' + suffix_link, '_inline_element' + suffix_delimiter + suffix_link]);
                 conflicts.push(['_emphasis_star' + suffix_link, '_strong_emphasis_star' + suffix_link, '_inline_element' + suffix_delimiter + suffix_link]);
             }
-            if (delimiter == 'star' || delimiter == 'underscore') {
+            if ((delimiter == 'star' || delimiter == 'underscore') && suffix_link != '_no_link') {
                 conflicts.push(['_strong_emphasis_' + delimiter + suffix_link, '_inline_element_no_' + delimiter]);
             }
             if (delimiter !== "underscore") {
