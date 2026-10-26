@@ -343,7 +343,7 @@ module.exports = grammar(add_inline_rules({
         // conflicts work.
         _word: $ => choice($._word_no_digit, $._digits),
         _word_no_digit: $ => new RegExp('[^' + PUNCTUATION_CHARACTERS_REGEX + ' \\t\\n\\r0-9]+(_+[^' + PUNCTUATION_CHARACTERS_REGEX + ' \\t\\n\\r0-9]+)*'),
-        _digits: $ => /[0-9][0-9_]*/,
+        _digits: $ => /[0-9]+(_+[0-9]+)*/, // Underscores can only be between digits
         _soft_line_break: $ => seq($._newline_token, optional($._last_token_whitespace)),
 
         _inline_base: $ => prec.right(repeat1(choice(

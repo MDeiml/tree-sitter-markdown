@@ -104,3 +104,15 @@ normal text (or even nothing) `[index][]`
   (code_span
     (code_span_delimiter)
     (code_span_delimiter)))
+
+================================================================================
+#151 - Underscore with numbers
+================================================================================
+_foobar1_
+
+--------------------------------------------------------------------------------
+
+(inline
+  (emphasis
+    (emphasis_delimiter)
+    (emphasis_delimiter)))
