@@ -6108,7 +6108,7 @@
     ],
     [
       "_strong_emphasis_star_no_link",
-      "_inline_element_no_star"
+      "_inline_element_no_star_no_link"
     ],
     [
       "_emphasis_underscore_no_link",
@@ -6134,7 +6134,7 @@
     ],
     [
       "_strong_emphasis_underscore_no_link",
-      "_inline_element_no_underscore"
+      "_inline_element_no_underscore_no_link"
     ],
     [
       "_strikethrough_no_link",
@@ -6257,6 +6257,30 @@
     {
       "type": "SYMBOL",
       "name": "_latex_span_close"
+    },
+    {
+      "type": "SYMBOL",
+      "name": "_highlight_open"
+    },
+    {
+      "type": "SYMBOL",
+      "name": "_highlight_close"
+    },
+    {
+      "type": "SYMBOL",
+      "name": "_superscript_open"
+    },
+    {
+      "type": "SYMBOL",
+      "name": "_superscript_close"
+    },
+    {
+      "type": "SYMBOL",
+      "name": "_subscript_open"
+    },
+    {
+      "type": "SYMBOL",
+      "name": "_subscript_close"
     },
     {
       "type": "SYMBOL",

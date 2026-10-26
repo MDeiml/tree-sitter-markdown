@@ -42,6 +42,8 @@ of them are on by default, these can be disabled with the environment variable
 | Github flavored markdown | `EXTENSION_GFM` | [link](https://github.github.com/gfm/) | ✓ | Task lists, strikethrough, pipe tables |
 | Task lists | `EXTENSION_TASK_LIST` | [link](https://github.github.com/gfm/#task-list-items-extension-) | ✓ |  |
 | Strikethrough | `EXTENSION_STRIKETHROUGH` | [link](https://github.github.com/gfm/#strikethrough-extension-) | ✓ |  |
+| Superscript | `EXTENSION_SUPERSUBSCRIPT` | [link](https://pandoc.org/MANUAL.html#superscripts-and-subscripts) |  |  |
+| Highlight | `EXTENSION_HIGHLIGHT` | [link](https://pandoc.org/MANUAL.html#highlighting) |  |  |
 | Pipe tables | `EXTENSION_PIPE_TABLE` | [link](https://github.github.com/gfm/#tables-extension-) | ✓ |  |
 | YAML metadata | `EXTENSION_MINUS_METADATA` | [link](https://gohugo.io/content-management/front-matter/) | ✓ |  |
 | TOML metadata | `EXTENSION_PLUS_METADATA` | [link](https://gohugo.io/content-management/front-matter/) | ✓ |  |

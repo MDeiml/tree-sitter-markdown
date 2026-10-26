@@ -22,6 +22,12 @@ typedef enum {
     STRIKETHROUGH_CLOSE,
     LATEX_SPAN_START,
     LATEX_SPAN_CLOSE,
+    HIGHLIGHT_OPEN,
+    HIGHLIGHT_CLOSE,
+    SUPERSCRIPT_OPEN,
+    SUPERSCRIPT_CLOSE,
+    SUBSCRIPT_OPEN,
+    SUBSCRIPT_CLOSE,
     UNCLOSED_SPAN
 } TokenType;
 
@@ -235,19 +241,22 @@ static bool parse_tilde(Scanner *s, TSLexer *lexer, const bool *valid_symbols) {
     }
     lexer->mark_end(lexer);
     // Otherwise count the number of tildes
-    uint8_t star_count = 1;
+    uint8_t tilde_count = 1;
     while (lexer->lookahead == '~') {
-        star_count++;
+        tilde_count++;
         lexer->advance(lexer, false);
     }
     bool line_end = lexer->lookahead == '\n' || lexer->lookahead == '\r' ||
                     lexer->eof(lexer);
-    if (valid_symbols[STRIKETHROUGH_OPEN] ||
-        valid_symbols[STRIKETHROUGH_CLOSE]) {
-        // The desicion made for the first star also counts for all the
-        // following stars in the delimiter run. Rembemer how many there are.
-        s->num_emphasis_delimiters_left = star_count - 1;
-        // Look ahead to the next symbol (after the last star) to find out if it
+
+    // Strikethrough uses two or more tildes.
+    if ((valid_symbols[STRIKETHROUGH_OPEN] ||
+         valid_symbols[STRIKETHROUGH_CLOSE]) &&
+        tilde_count >= 2) {
+        // The desicion made for the first tilde also counts for all the
+        // following tildes in the delimiter run. Rembemer how many there are.
+        s->num_emphasis_delimiters_left = tilde_count - 1;
+        // Look ahead to the next symbol (after the last tilde) to find out if it
         // is whitespace punctuation or other.
         bool next_symbol_whitespace =
             line_end || lexer->lookahead == ' ' || lexer->lookahead == '\t';
@@ -271,6 +280,30 @@ static bool parse_tilde(Scanner *s, TSLexer *lexer, const bool *valid_symbols) {
             return true;
         }
     }
+
+    // Subscript uses a single tilde.
+    if ((valid_symbols[SUBSCRIPT_OPEN] || valid_symbols[SUBSCRIPT_CLOSE]) &&
+        tilde_count == 1) {
+        bool next_symbol_whitespace =
+            line_end || lexer->lookahead == ' ' || lexer->lookahead == '\t';
+        bool next_symbol_punctuation = is_punctuation(lexer->lookahead);
+        if (valid_symbols[SUBSCRIPT_CLOSE] &&
+            !valid_symbols[LAST_TOKEN_WHITESPACE] &&
+            (!valid_symbols[LAST_TOKEN_PUNCTUATION] ||
+             next_symbol_punctuation || next_symbol_whitespace)) {
+            s->state &= ~STATE_EMPHASIS_DELIMITER_IS_OPEN;
+            lexer->result_symbol = SUBSCRIPT_CLOSE;
+            return true;
+        }
+        if (!next_symbol_whitespace && (!next_symbol_punctuation ||
+                                        valid_symbols[LAST_TOKEN_PUNCTUATION] ||
+                                        valid_symbols[LAST_TOKEN_WHITESPACE])) {
+            s->state |= STATE_EMPHASIS_DELIMITER_IS_OPEN;
+            lexer->result_symbol = SUBSCRIPT_OPEN;
+            return true;
+        }
+    }
+
     return false;
 }
 
@@ -337,6 +370,89 @@ static bool parse_underscore(Scanner *s, TSLexer *lexer,
     return false;
 }
 
+static bool parse_equal(Scanner *s, TSLexer *lexer, const bool *valid_symbols) {
+    (void)s;
+    lexer->advance(lexer, false);
+    if (lexer->lookahead != '=') {
+        return false;
+    }
+    lexer->advance(lexer, false);
+    lexer->mark_end(lexer);
+    if (lexer->lookahead == '=') {
+        return false;
+    }
+
+    bool line_end = lexer->lookahead == '\n' || lexer->lookahead == '\r' ||
+                    lexer->eof(lexer);
+    if (valid_symbols[HIGHLIGHT_OPEN] || valid_symbols[HIGHLIGHT_CLOSE]) {
+        bool next_symbol_whitespace =
+            line_end || lexer->lookahead == ' ' || lexer->lookahead == '\t';
+        bool next_symbol_punctuation = is_punctuation(lexer->lookahead);
+        if (valid_symbols[HIGHLIGHT_CLOSE] &&
+            !valid_symbols[LAST_TOKEN_WHITESPACE] &&
+            (!valid_symbols[LAST_TOKEN_PUNCTUATION] ||
+             next_symbol_punctuation || next_symbol_whitespace)) {
+            lexer->result_symbol = HIGHLIGHT_CLOSE;
+            return true;
+        }
+        if (!next_symbol_whitespace && (!next_symbol_punctuation ||
+                                        valid_symbols[LAST_TOKEN_PUNCTUATION] ||
+                                        valid_symbols[LAST_TOKEN_WHITESPACE])) {
+            lexer->result_symbol = HIGHLIGHT_OPEN;
+            return true;
+        }
+    }
+    return false;
+}
+
+static bool parse_caret(Scanner *s, TSLexer *lexer, const bool *valid_symbols) {
+    lexer->advance(lexer, false);
+    if (s->num_emphasis_delimiters_left > 0) {
+        if ((s->state & STATE_EMPHASIS_DELIMITER_IS_OPEN) &&
+            valid_symbols[SUPERSCRIPT_OPEN]) {
+            s->state &= (~STATE_EMPHASIS_DELIMITER_IS_OPEN);
+            lexer->result_symbol = SUPERSCRIPT_OPEN;
+            s->num_emphasis_delimiters_left--;
+            return true;
+        }
+        if (valid_symbols[SUPERSCRIPT_CLOSE]) {
+            lexer->result_symbol = SUPERSCRIPT_CLOSE;
+            s->num_emphasis_delimiters_left--;
+            return true;
+        }
+    }
+    lexer->mark_end(lexer);
+    uint8_t caret_count = 1;
+    while (lexer->lookahead == '^') {
+        caret_count++;
+        lexer->advance(lexer, false);
+    }
+    bool line_end = lexer->lookahead == '\n' || lexer->lookahead == '\r' ||
+                    lexer->eof(lexer);
+    if (valid_symbols[SUPERSCRIPT_OPEN] || valid_symbols[SUPERSCRIPT_CLOSE]) {
+        s->num_emphasis_delimiters_left = caret_count - 1;
+        bool next_symbol_whitespace =
+            line_end || lexer->lookahead == ' ' || lexer->lookahead == '\t';
+        bool next_symbol_punctuation = is_punctuation(lexer->lookahead);
+        if (valid_symbols[SUPERSCRIPT_CLOSE] &&
+            !valid_symbols[LAST_TOKEN_WHITESPACE] &&
+            (!valid_symbols[LAST_TOKEN_PUNCTUATION] ||
+             next_symbol_punctuation || next_symbol_whitespace)) {
+            s->state &= ~STATE_EMPHASIS_DELIMITER_IS_OPEN;
+            lexer->result_symbol = SUPERSCRIPT_CLOSE;
+            return true;
+        }
+        if (!next_symbol_whitespace && (!next_symbol_punctuation ||
+                                        valid_symbols[LAST_TOKEN_PUNCTUATION] ||
+                                        valid_symbols[LAST_TOKEN_WHITESPACE])) {
+            s->state |= STATE_EMPHASIS_DELIMITER_IS_OPEN;
+            lexer->result_symbol = SUPERSCRIPT_OPEN;
+            return true;
+        }
+    }
+    return false;
+}
+
 static bool scan(Scanner *s, TSLexer *lexer, const bool *valid_symbols) {
     // A normal tree-sitter rule decided that the current branch is invalid and
     // now "requests" an error to stop the branch
@@ -362,6 +478,10 @@ static bool scan(Scanner *s, TSLexer *lexer, const bool *valid_symbols) {
             return parse_underscore(s, lexer, valid_symbols);
         case '~':
             return parse_tilde(s, lexer, valid_symbols);
+        case '=':
+            return parse_equal(s, lexer, valid_symbols);
+        case '^':
+            return parse_caret(s, lexer, valid_symbols);
     }
     return false;
 }

@@ -1,0 +1,27 @@
+================================================================================
+Basic highlight parsing
+================================================================================
+==highlight==
+
+-------------------------------------------------------------------------------
+(inline
+  (highlight
+    (emphasis_delimiter)
+    (emphasis_delimiter)))
+
+================================================================================
+Highlight containing superscript and subscript
+================================================================================
+==a ^b^ ~c~==
+
+-------------------------------------------------------------------------------
+(inline
+  (highlight
+    (emphasis_delimiter)
+    (superscript
+      (emphasis_delimiter)
+      (emphasis_delimiter))
+    (subscript
+      (emphasis_delimiter)
+      (emphasis_delimiter))
+    (emphasis_delimiter)))
