@@ -91,18 +91,6 @@ __foo__bar__baz__
   (strong_emphasis))
 
 ================================================================================
-Example 420 - https://github.github.com/gfm/#example-420
-:skip
-================================================================================
-*foo**bar**baz*
-
---------------------------------------------------------------------------------
-
-(inline
-  (emphasis
-    (strong_emphasis)))
-
-================================================================================
 Example 421 - https://github.github.com/gfm/#example-421
 :skip
 ================================================================================
@@ -112,30 +100,6 @@ Example 421 - https://github.github.com/gfm/#example-421
 
 (inline
   (emphasis))
-
-================================================================================
-Example 424 - https://github.github.com/gfm/#example-424
-:skip
-================================================================================
-*foo**bar***
-
---------------------------------------------------------------------------------
-
-(inline
-  (emphasis
-    (strong_emphasis)))
-
-================================================================================
-Example 438 - https://github.github.com/gfm/#example-438
-:skip
-================================================================================
-**foo*bar*baz**
-
---------------------------------------------------------------------------------
-
-(inline
-  (strong_emphasis
-    (emphasis))))
 
 ================================================================================
 Example 524 - https://github.github.com/gfm/#example-524
@@ -176,8 +140,7 @@ Example 538 - https://github.github.com/gfm/#example-538
       (emphasis
         (strong_emphasis)
         (code_span)))
-    (link_label)))
-(link_reference_definition
+    (link_label)))(link_reference_definition
   (link_label)
   (link_destination))
 

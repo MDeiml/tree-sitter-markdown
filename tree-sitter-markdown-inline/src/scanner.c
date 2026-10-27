@@ -33,10 +33,25 @@ static bool is_punctuation(int32_t chr) {
 
 // State bitflags used with `Scanner.state`
 
-// TODO
-static UNUSED const uint8_t STATE_EMPHASIS_DELIMITER_MOD_3 = 0x3;
+// Length modulo 3 of the last `*` delimiter run that opened emphasis, for the
+// "rule of three" (CommonMark §6.2, rules 9 and 10)
+static const uint8_t STATE_EMPHASIS_DELIMITER_MOD_3 = 0x3;
 // Current delimiter run is opening
 static const uint8_t STATE_EMPHASIS_DELIMITER_IS_OPEN = 0x1 << 2;
+// Length modulo 3 of the last `_` delimiter run that opened emphasis
+static const uint8_t STATE_UNDERSCORE_DELIMITER_MOD_3_SHIFT = 3;
+static const uint8_t STATE_UNDERSCORE_DELIMITER_MOD_3 = 0x3 << 3;
+
+// The rule of three (CommonMark §6.2, rules 9 and 10): "If one of the
+// delimiters can both open and close emphasis, then the sum of the lengths of
+// the delimiter runs containing the opening and closing delimiters must not be
+// a multiple of 3 unless both lengths are multiples of 3." Only the lengths
+// modulo 3 are needed for that.
+static bool rule_of_three_forbids(uint8_t opener_mod_3, uint8_t closer_length) {
+    uint8_t closer_mod_3 = closer_length % 3;
+    return (opener_mod_3 + closer_mod_3) % 3 == 0 &&
+           !(opener_mod_3 == 0 && closer_mod_3 == 0);
+}
 
 // Convenience function to emit the error token. This is done to stop invalid
 // parse branches. Specifically:
@@ -150,6 +165,96 @@ static bool parse_dollar(Scanner *s, TSLexer *lexer,
                                 LATEX_SPAN_CLOSE);
 }
 
+// How far `has_compatible_closer` looks ahead, in characters. Past it the
+// scanner keeps its old behaviour, so the rule of three costs at most this much
+// per delimiter run it applies to, and pathological input stays linear.
+static const unsigned RULE_OF_THREE_LOOKAHEAD = 1000;
+
+static bool is_whitespace_or_line_end(TSLexer *lexer) {
+    return lexer->eof(lexer) || lexer->lookahead == ' ' ||
+           lexer->lookahead == '\t' || lexer->lookahead == '\n' ||
+           lexer->lookahead == '\r';
+}
+
+// Whether the next run of `delimiter` in the inline content could close an
+// opener run of `opener_length` that can also close, as the rule of three
+// allows. The lexer stands just after the opener run; the token's end has
+// already been marked, so looking ahead does not consume anything.
+//
+// A run that the rule of three forbids to close opens instead only if the next
+// run can close it. Otherwise opening would leave both it and the earlier
+// opener unmatched, where CommonMark would pair the earlier opener with a later
+// closer, which a scanner deciding one run at a time cannot do; so `**a****b**`
+// keeps the parse it had before. Asking about any later run, rather than the
+// next one, turns many runs into openers that never close, and the number of
+// parse branches grows quickly (`**a****b ` repeated).
+//
+// Code spans are skipped and backslash escapes are not delimiters. Links and
+// raw HTML are not modelled, as elsewhere in this scanner.
+static bool has_compatible_closer(TSLexer *lexer, int32_t delimiter,
+                                  uint8_t opener_length) {
+    bool previous_whitespace = false;
+    bool previous_punctuation = true;   // the opener run's last delimiter
+    for (unsigned seen = 0; seen < RULE_OF_THREE_LOOKAHEAD && !lexer->eof(lexer);) {
+        int32_t chr = lexer->lookahead;
+        if (chr == '\\') {
+            lexer->advance(lexer, false);
+            seen++;
+            if (!lexer->eof(lexer)) {
+                previous_punctuation = is_punctuation(lexer->lookahead);
+                previous_whitespace = false;
+                lexer->advance(lexer, false);
+                seen++;
+            }
+            continue;
+        }
+        if (chr == '`') {
+            unsigned ticks = 0;
+            while (lexer->lookahead == '`') {
+                ticks++;
+                lexer->advance(lexer, false);
+                seen++;
+            }
+            // A code span's content is text; find where it ends, if it does.
+            unsigned closing = 0;
+            while (!lexer->eof(lexer) && seen < RULE_OF_THREE_LOOKAHEAD) {
+                if (lexer->lookahead == '`') {
+                    closing++;
+                } else if (closing == ticks) {
+                    break;
+                } else {
+                    closing = 0;
+                }
+                lexer->advance(lexer, false);
+                seen++;
+            }
+            previous_punctuation = true;
+            previous_whitespace = false;
+            continue;
+        }
+        if (chr == delimiter) {
+            uint8_t length = 0;
+            while (lexer->lookahead == delimiter && length < UINT8_MAX) {
+                length++;
+                lexer->advance(lexer, false);
+                seen++;
+            }
+            bool next_whitespace = is_whitespace_or_line_end(lexer);
+            bool next_punctuation = !lexer->eof(lexer) && is_punctuation(lexer->lookahead);
+            bool closes = !previous_whitespace &&
+                          (!previous_punctuation || next_punctuation || next_whitespace);
+            // Only the next run of the delimiter is asked. The opener can
+            // close, so the rule applies to it whatever it is.
+            return closes && !rule_of_three_forbids(opener_length % 3, length);
+        }
+        previous_whitespace = chr == ' ' || chr == '\t' || chr == '\n' || chr == '\r';
+        previous_punctuation = is_punctuation(chr);
+        lexer->advance(lexer, false);
+        seen++;
+    }
+    return false;
+}
+
 static bool parse_star(Scanner *s, TSLexer *lexer, const bool *valid_symbols) {
     lexer->advance(lexer, false);
     // If `num_emphasis_delimiters_left` is not zero then we already decided
@@ -192,19 +297,30 @@ static bool parse_star(Scanner *s, TSLexer *lexer, const bool *valid_symbols) {
         bool next_symbol_punctuation = is_punctuation(lexer->lookahead);
         // Information about the last token is in valid_symbols. See grammar.js
         // for these tokens for how this is done.
-        if (valid_symbols[EMPHASIS_CLOSE_STAR] &&
-            !valid_symbols[LAST_TOKEN_WHITESPACE] &&
-            (!valid_symbols[LAST_TOKEN_PUNCTUATION] ||
-             next_symbol_punctuation || next_symbol_whitespace)) {
-            // Closing delimiters take precedence
+        bool can_close = valid_symbols[EMPHASIS_CLOSE_STAR] &&
+                         !valid_symbols[LAST_TOKEN_WHITESPACE] &&
+                         (!valid_symbols[LAST_TOKEN_PUNCTUATION] ||
+                          next_symbol_punctuation || next_symbol_whitespace);
+        bool can_open = !next_symbol_whitespace &&
+                        (!next_symbol_punctuation ||
+                         valid_symbols[LAST_TOKEN_PUNCTUATION] ||
+                         valid_symbols[LAST_TOKEN_WHITESPACE]);
+        // Closing delimiters take precedence, unless the run could also open,
+        // the rule of three forbids it to close the last opener, and the next
+        // run could close it: then it opens, as in `*foo**bar**baz*`.
+        if (can_close &&
+            !(can_open &&
+              rule_of_three_forbids(s->state & STATE_EMPHASIS_DELIMITER_MOD_3,
+                                    star_count) &&
+              has_compatible_closer(lexer, '*', star_count))) {
             s->state &= ~STATE_EMPHASIS_DELIMITER_IS_OPEN;
             lexer->result_symbol = EMPHASIS_CLOSE_STAR;
             return true;
         }
-        if (!next_symbol_whitespace && (!next_symbol_punctuation ||
-                                        valid_symbols[LAST_TOKEN_PUNCTUATION] ||
-                                        valid_symbols[LAST_TOKEN_WHITESPACE])) {
+        if (can_open) {
             s->state |= STATE_EMPHASIS_DELIMITER_IS_OPEN;
+            s->state = (uint8_t)((s->state & ~STATE_EMPHASIS_DELIMITER_MOD_3) |
+                                 (star_count % 3));
             lexer->result_symbol = EMPHASIS_OPEN_STAR;
             return true;
         }
@@ -317,19 +433,31 @@ static bool parse_underscore(Scanner *s, TSLexer *lexer,
         bool next_symbol_punctuation = is_punctuation(lexer->lookahead);
         // Information about the last token is in valid_symbols. See grammar.js
         // for these tokens for how this is done.
-        if (valid_symbols[EMPHASIS_CLOSE_UNDERSCORE] &&
-            !valid_symbols[LAST_TOKEN_WHITESPACE] &&
-            (!valid_symbols[LAST_TOKEN_PUNCTUATION] ||
-             next_symbol_punctuation || next_symbol_whitespace)) {
-            // Closing delimiters take precedence
+        bool can_close = valid_symbols[EMPHASIS_CLOSE_UNDERSCORE] &&
+                         !valid_symbols[LAST_TOKEN_WHITESPACE] &&
+                         (!valid_symbols[LAST_TOKEN_PUNCTUATION] ||
+                          next_symbol_punctuation || next_symbol_whitespace);
+        bool can_open = !next_symbol_whitespace &&
+                        (!next_symbol_punctuation ||
+                         valid_symbols[LAST_TOKEN_PUNCTUATION] ||
+                         valid_symbols[LAST_TOKEN_WHITESPACE]);
+        // As for `*`: closing takes precedence unless the rule of three
+        // forbids it and the run could open instead.
+        uint8_t opener_mod_3 =
+            (s->state & STATE_UNDERSCORE_DELIMITER_MOD_3) >>
+            STATE_UNDERSCORE_DELIMITER_MOD_3_SHIFT;
+        if (can_close &&
+            !(can_open && rule_of_three_forbids(opener_mod_3, underscore_count) &&
+              has_compatible_closer(lexer, '_', underscore_count))) {
             s->state &= ~STATE_EMPHASIS_DELIMITER_IS_OPEN;
             lexer->result_symbol = EMPHASIS_CLOSE_UNDERSCORE;
             return true;
         }
-        if (!next_symbol_whitespace && (!next_symbol_punctuation ||
-                                        valid_symbols[LAST_TOKEN_PUNCTUATION] ||
-                                        valid_symbols[LAST_TOKEN_WHITESPACE])) {
+        if (can_open) {
             s->state |= STATE_EMPHASIS_DELIMITER_IS_OPEN;
+            s->state = (uint8_t)((s->state & ~STATE_UNDERSCORE_DELIMITER_MOD_3) |
+                                 ((underscore_count % 3)
+                                  << STATE_UNDERSCORE_DELIMITER_MOD_3_SHIFT));
             lexer->result_symbol = EMPHASIS_OPEN_UNDERSCORE;
             return true;
         }
