@@ -4524,77 +4524,70 @@
       ]
     },
     "_inline_base": {
-      "type": "PREC_RIGHT",
-      "value": 0,
-      "content": {
-        "type": "REPEAT1",
-        "content": {
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "SYMBOL",
+          "name": "image"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "_soft_line_break"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "backslash_escape"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "hard_line_break"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "uri_autolink"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "email_autolink"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "entity_reference"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "numeric_character_reference"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "latex_block"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "code_span"
+        },
+        {
+          "type": "ALIAS",
+          "content": {
+            "type": "SYMBOL",
+            "name": "_html_tag"
+          },
+          "named": true,
+          "value": "html_tag"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "_text_base"
+        },
+        {
           "type": "CHOICE",
-          "members": [
-            {
-              "type": "SYMBOL",
-              "name": "image"
-            },
-            {
-              "type": "SYMBOL",
-              "name": "_soft_line_break"
-            },
-            {
-              "type": "SYMBOL",
-              "name": "backslash_escape"
-            },
-            {
-              "type": "SYMBOL",
-              "name": "hard_line_break"
-            },
-            {
-              "type": "SYMBOL",
-              "name": "uri_autolink"
-            },
-            {
-              "type": "SYMBOL",
-              "name": "email_autolink"
-            },
-            {
-              "type": "SYMBOL",
-              "name": "entity_reference"
-            },
-            {
-              "type": "SYMBOL",
-              "name": "numeric_character_reference"
-            },
-            {
-              "type": "SYMBOL",
-              "name": "latex_block"
-            },
-            {
-              "type": "SYMBOL",
-              "name": "code_span"
-            },
-            {
-              "type": "ALIAS",
-              "content": {
-                "type": "SYMBOL",
-                "name": "_html_tag"
-              },
-              "named": true,
-              "value": "html_tag"
-            },
-            {
-              "type": "SYMBOL",
-              "name": "_text_base"
-            },
-            {
-              "type": "CHOICE",
-              "members": []
-            },
-            {
-              "type": "SYMBOL",
-              "name": "_unclosed_span"
-            }
-          ]
+          "members": []
+        },
+        {
+          "type": "SYMBOL",
+          "name": "_unclosed_span"
         }
-      }
+      ]
     },
     "_text_base": {
       "type": "CHOICE",
