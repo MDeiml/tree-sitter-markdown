@@ -346,7 +346,7 @@ module.exports = grammar(add_inline_rules({
         _digits: $ => /[0-9][0-9_]*/,
         _soft_line_break: $ => seq($._newline_token, optional($._last_token_whitespace)),
 
-        _inline_base: $ => prec.right(repeat1(choice(
+        _inline_base: $ => choice(
             $.image,
             $._soft_line_break,
             $.backslash_escape,
@@ -361,7 +361,7 @@ module.exports = grammar(add_inline_rules({
             $._text_base,
             common.EXTENSION_TAGS ? $.tag : choice(),
             $._unclosed_span,
-        ))),
+        ),
         _text_base: $ => choice(
             $._word,
             common.punctuation_without($, ['[', ']']),
