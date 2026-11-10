@@ -104,3 +104,149 @@ normal text (or even nothing) `[index][]`
   (code_span
     (code_span_delimiter)
     (code_span_delimiter)))
+
+================================================================================
+#9 - Whitespace-only shortcut labels
+================================================================================
+[ ] [   ] [	] []
+[
+ ]
+
+--------------------------------------------------------------------------------
+
+(inline)
+
+================================================================================
+#9 - Whitespace-only brackets followed by literal text
+================================================================================
+- [ ]skil
+[ ]: /uri
+[ ](not a link)
+
+--------------------------------------------------------------------------------
+
+(inline)
+
+================================================================================
+#9 - Whitespace-only brackets with hard line breaks
+================================================================================
+[  
+]
+[	
+]
+
+--------------------------------------------------------------------------------
+
+(inline
+  (hard_line_break)
+  (hard_line_break))
+
+================================================================================
+#9 - Vertical tabs and form feeds in shortcut labels
+================================================================================
+[] [] [] [  ]
+[text]
+
+--------------------------------------------------------------------------------
+
+(inline
+  (shortcut_link
+    (link_text)))
+
+================================================================================
+#9 - Whitespace-only text in inline and full reference links
+================================================================================
+[ ](/url)
+[ ][ref]
+[](/empty)
+[](/url)
+[][ref]
+[  
+](/url)
+
+--------------------------------------------------------------------------------
+
+(inline
+  (inline_link
+    (link_text)
+    (link_destination))
+  (full_reference_link
+    (link_text)
+    (link_label))
+  (inline_link
+    (link_destination))
+  (inline_link
+    (link_text)
+    (link_destination))
+  (full_reference_link
+    (link_text)
+    (link_label))
+  (inline_link
+    (link_text
+      (hard_line_break))
+    (link_destination)))
+
+================================================================================
+#9 - Nonblank shortcut labels with surrounding whitespace
+================================================================================
+[ foo ] [0] [\]]
+[
+bar
+]
+
+--------------------------------------------------------------------------------
+
+(inline
+  (shortcut_link
+    (link_text))
+  (shortcut_link
+    (link_text))
+  (shortcut_link
+    (link_text
+      (backslash_escape)))
+  (shortcut_link
+    (link_text)))
+
+================================================================================
+#9 - Shortcut label whitespace is checked before inline rendering
+================================================================================
+[` `] [&nbsp;] [ ]
+[\
+]
+
+--------------------------------------------------------------------------------
+
+(inline
+  (shortcut_link
+    (link_text
+      (code_span
+        (code_span_delimiter)
+        (code_span_delimiter))))
+  (shortcut_link
+    (link_text
+      (entity_reference)))
+  (shortcut_link
+    (link_text))
+  (shortcut_link
+    (link_text
+      (hard_line_break))))
+
+================================================================================
+#9 - Whitespace-only brackets inside emphasis
+================================================================================
+*[ ]* _[ ]_ **[ ]**
+
+--------------------------------------------------------------------------------
+
+(inline
+  (emphasis
+    (emphasis_delimiter)
+    (emphasis_delimiter))
+  (emphasis
+    (emphasis_delimiter)
+    (emphasis_delimiter))
+  (strong_emphasis
+    (emphasis_delimiter)
+    (emphasis_delimiter)
+    (emphasis_delimiter)
+    (emphasis_delimiter)))
