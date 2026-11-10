@@ -82,6 +82,14 @@ module.exports = grammar(add_inline_rules({
         [$._link_text_non_empty, $._inline_element_no_star],
         [$._link_text_non_empty, $._inline_element_no_underscore],
         [$._link_text_non_empty, $._inline_element_no_tilde],
+        [$._link_text_non_empty, $._whitespace_only_brackets, $._inline_element],
+        [$._link_text_non_empty, $._whitespace_only_brackets, $._inline_element_no_star],
+        [$._link_text_non_empty, $._whitespace_only_brackets, $._inline_element_no_underscore],
+        [$._link_text_non_empty, $._whitespace_only_brackets, $._inline_element_no_tilde],
+        [$._whitespace_only_brackets, $._text_base],
+        [$._whitespace_only_brackets, $._inline_base],
+        [$._whitespace_only_brackets, $.hard_line_break],
+        [$._whitespace_only_brackets, $._word_no_digit],
         [$._link_text, $._inline_element],
         [$._link_text, $._inline_element_no_star],
         [$._link_text, $._inline_element_no_underscore],
@@ -147,6 +155,16 @@ module.exports = grammar(add_inline_rules({
         )),
         _link_text_non_empty: $ => seq('[', alias($._inline_no_link, $.link_text), ']'),
         shortcut_link: $ => prec.dynamic(PRECEDENCE_LEVEL_LINK, $._link_text_non_empty),
+        // Blank labels are literal text. Prefer this over shortcut links, but let
+        // inline and full reference links use whitespace-only link text.
+        _whitespace_only_brackets: $ => prec.dynamic(PRECEDENCE_LEVEL_LINK + 1, seq(
+            '[', repeat1(choice(
+                $._whitespace,
+                $._soft_line_break,
+                $._control_whitespace,
+                alias($._whitespace_hard_line_break, $.hard_line_break),
+            )), ']'
+        )),
         full_reference_link: $ => prec.dynamic(2 * PRECEDENCE_LEVEL_LINK, seq(
             $._link_text,
             $.link_label
@@ -329,7 +347,8 @@ module.exports = grammar(add_inline_rules({
         // A hard line break.
         //
         // https://github.github.com/gfm/#hard-line-breaks
-        hard_line_break: $ => seq(choice('\\', $._whitespace_ge_2), $._soft_line_break),
+        hard_line_break: $ => choice(seq('\\', $._soft_line_break), $._whitespace_hard_line_break),
+        _whitespace_hard_line_break: $ => prec(1, seq($._whitespace_ge_2, $._soft_line_break)),
         _text: $ => choice($._word, common.punctuation_without($, []), $._whitespace),
 
         // Whitespace is divided into single whitespaces and multiple whitespaces as wee need this
@@ -342,7 +361,13 @@ module.exports = grammar(add_inline_rules({
         // lexer does not have to many different states, which makes it a lot easier to make
         // conflicts work.
         _word: $ => choice($._word_no_digit, $._digits),
-        _word_no_digit: $ => new RegExp('[^' + PUNCTUATION_CHARACTERS_REGEX + ' \\t\\n\\r0-9]+(_+[^' + PUNCTUATION_CHARACTERS_REGEX + ' \\t\\n\\r0-9]+)*'),
+        _word_no_digit: $ => choice(
+            $._control_whitespace,
+            new RegExp('[^' + PUNCTUATION_CHARACTERS_REGEX + ' \\t\\n\\r0-9]+(_+[^' + PUNCTUATION_CHARACTERS_REGEX + ' \\t\\n\\r0-9]+)*'),
+        ),
+        // These also count as whitespace in link labels; share the token with
+        // ordinary text so blank labels can still be used in inline links.
+        _control_whitespace: $ => token(prec(1, /[\v\f]+/)),
         _digits: $ => /[0-9][0-9_]*/,
         _soft_line_break: $ => seq($._newline_token, optional($._last_token_whitespace)),
 
@@ -422,6 +447,7 @@ function add_inline_rules(grammar) {
                         $.full_reference_link,
                         $.collapsed_reference_link,
                         $.inline_link,
+                        $._whitespace_only_brackets,
                         // (common.EXTENSION_WIKI_LINK && $.wiki_link),
                         seq(choice('[', ']'), optional($._last_token_punctuation)),
                     ]);
